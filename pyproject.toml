@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "anywhere"
+version = "0.1.0"
+description = ""
+authors = ["LiaoKong <568250549@qq.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=2.7,<2.8 || >=3.6.0,<3.10"
+pyside2 = "^5.15.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "ali"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
