@@ -11,26 +11,45 @@ class CommonPage(QtWidgets.QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        layout = QtWidgets.QGridLayout(self)
-        layout.setAlignment(QtCore.Qt.AlignTop)
+        line_layout = QtWidgets.QGridLayout()
+        line_layout.setAlignment(QtCore.Qt.AlignTop)
 
         self.proxy_line = QtWidgets.QLineEdit(
             placeholderText='请输入代理完整接口，留空则使用OpenAI官方接口地址',
             minimumHeight=30)
-        layout.addWidget(QtWidgets.QLabel('代理地址:'), 0, 0)
-        layout.addWidget(self.proxy_line, 0, 1)
+        line_layout.addWidget(QtWidgets.QLabel('代理地址:'), 0, 0)
+        line_layout.addWidget(self.proxy_line, 0, 1)
 
         self.key_line = QtWidgets.QLineEdit(placeholderText='请输入 API Key', minimumHeight=30)
         self.key_line.setEchoMode(QtWidgets.QLineEdit.Password)
-        layout.addWidget(QtWidgets.QLabel('API Key:'), 1, 0)
-        layout.addWidget(self.key_line, 1, 1)
+        line_layout.addWidget(QtWidgets.QLabel('API Key:'), 1, 0)
+        line_layout.addWidget(self.key_line, 1, 1)
 
         self.model_line = QtWidgets.QLineEdit('gpt-3.5-turbo', placeholderText='请输入模型全局模型名', minimumHeight=30)
-        layout.addWidget(QtWidgets.QLabel('全局模型名:'), 2, 0)
-        layout.addWidget(self.model_line, 2, 1)
+        line_layout.addWidget(QtWidgets.QLabel('全局模型名:'), 2, 0)
+        line_layout.addWidget(self.model_line, 2, 1)
 
-        layout.addWidget(QtWidgets.QLabel('配置文件位置:'), 3, 0)
-        layout.addWidget(QtWidgets.QLabel(CONFIG_PATH, minimumHeight=30), 3, 1)
+        self.chat_line = QtWidgets.QLineEdit(placeholderText='请输入呼出聊天窗口快捷键', minimumHeight=30)
+        line_layout.addWidget(QtWidgets.QLabel('聊天快捷键:'), 3, 0)
+        line_layout.addWidget(self.chat_line, 3, 1)
+
+        self.menu_line = QtWidgets.QLineEdit(placeholderText='请输入呼出超级菜单快捷键', minimumHeight=30)
+        line_layout.addWidget(QtWidgets.QLabel('超级菜单快捷键:'), 4, 0)
+        line_layout.addWidget(self.menu_line, 4, 1)
+
+        line_layout.addWidget(QtWidgets.QLabel('配置文件位置:'), 5, 0)
+        line_layout.addWidget(QtWidgets.QLabel(CONFIG_PATH, minimumHeight=30), 5, 1)
+
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.setAlignment(QtCore.Qt.AlignRight)
+        button_layout.setContentsMargins(0, 26, 16, 0)
+        self.save_button = QtWidgets.QPushButton('保存', minimumHeight=34, minimumWidth=86)
+        button_layout.addWidget(self.save_button)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.addLayout(line_layout)
+        layout.addLayout(button_layout)
 
 
 class PluginPage(QtWidgets.QWidget):
