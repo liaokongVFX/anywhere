@@ -1,0 +1,33 @@
+from PySide2 import QtWidgets
+
+from anywhere.chat_history_widget import ChatHistoryWidget
+from anywhere.chat_content_widget import ChatWidget
+
+
+class ChatWindow(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._init_ui()
+
+    def _init_ui(self):
+        self.resize(900, 700)
+
+        self.chat_history_widget = ChatHistoryWidget()
+        self.chat_widget = ChatWidget()
+
+        splitter = QtWidgets.QSplitter()
+        splitter.addWidget(self.chat_history_widget)
+        splitter.addWidget(self.chat_widget)
+        splitter.setSizes([200, 700])
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(splitter)
+
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication([])
+
+    cw = ChatWindow()
+    cw.show()
+
+    app.exec_()
