@@ -3,7 +3,7 @@ from PySide2 import QtCore
 from PySide2 import QtGui
 import qtawesome
 
-from anywhere.utils import chat_history_storage
+from anywhere.utils import chat_history_storage, get_config
 from anywhere.widgets import show_message, show_question, signal_bus
 
 
@@ -43,7 +43,13 @@ class NewChatWindow(QtWidgets.QWidget):
     def show_window(self, count):
         self.setWindowTitle('创建聊天')
         self.name_line.setText(f'新聊天{count}')
+
+        self.role_combobox.clear()
+        self.role_combobox.addItems(
+            [''] + [x['name'] for x in get_config('role', 'list') if x['enabled']]
+        )
         self.role_combobox.setCurrentText('')
+
         self.description_line.setText('')
         self.temperature_line.setValue(0.6)
         self.old_name = None
@@ -52,6 +58,10 @@ class NewChatWindow(QtWidgets.QWidget):
     def show_edit_window(self, name, config):
         self.setWindowTitle('编辑聊天')
         self.name_line.setText(name)
+
+        self.role_combobox.clear()
+        self.role_combobox.addItems([''] + [x['name'] for x in get_config('role', 'list')])
+
         self.role_combobox.setCurrentText(config.get('role', ''))
         self.description_line.setText(config.get('description', ''))
         self.temperature_line.setValue(config.get('temperature', 0.6))

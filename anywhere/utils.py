@@ -6,9 +6,15 @@ CONFIG_PATH = '{}/{}'.format(CONFIG_ROOT, 'AnywhereConfig.json')
 CHAT_HISTORY = '{}/{}'.format(CONFIG_ROOT, 'ChatHistory.json')
 
 
-def save_config(config_type, _data):
-    data = get_config()
-    data.setdefault(config_type, {}).update(_data)
+def save_config(config_type, _data, data_type='dict', is_set=False):
+    data = get_config(data_type=data_type)
+    if not is_set:
+        if data_type == 'dict':
+            data.setdefault(config_type, {}).update(_data)
+        else:
+            data.setdefault(config_type, []).append(_data)
+    else:
+        data[config_type] = _data
 
     if not os.path.exists(os.path.dirname(CONFIG_PATH)):
         os.makedirs(os.path.dirname(CONFIG_PATH))
@@ -16,14 +22,15 @@ def save_config(config_type, _data):
         f.write(json.dumps(data, indent=2))
 
 
-def get_config(config_type=None):
+def get_config(config_type=None, data_type='dict'):
+    default = {} if data_type == 'dict' else []
     if not os.path.exists(CONFIG_PATH):
-        return {}
+        return default
 
     with open(CONFIG_PATH) as f:
         data = json.loads(f.read())
         if config_type:
-            return data.get(config_type, {})
+            return data.get(config_type, default)
         return data
 
 
