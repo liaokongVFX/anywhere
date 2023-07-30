@@ -8,10 +8,15 @@ def show_message(message, message_type='success', parent=None):
     return QtWidgets.QMessageBox.critical(parent, '提示', message)
 
 
+def show_question(question, parent=None):
+    response = QtWidgets.QMessageBox.question(parent, '询问', question)
+    return response == QtWidgets.QMessageBox.Yes
+
+
 class SignalBus(QtCore.QObject):
     """ 全局事件总线 """
 
-    chat_send_message = QtCore.Signal(dict)
+    history_item_changed = QtCore.Signal(dict)
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, '_instance'):

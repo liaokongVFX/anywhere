@@ -23,6 +23,8 @@ class ChatWindow(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(splitter)
 
+        self.chat_history_widget.init_data()
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication([])

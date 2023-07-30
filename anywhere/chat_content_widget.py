@@ -140,6 +140,7 @@ class ChatWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._history_messages = []
+        self._history_data = []
 
         self._init_ui()
 
@@ -161,7 +162,8 @@ class ChatWidget(QtWidgets.QWidget):
 
         self.send_text_widget = QtWidgets.QPlainTextEdit(
             placeholderText='点击右侧按钮或者使用快捷键 Ctrl+Enter 发送消息')
-        send_text_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+Return'), self.send_text_widget)
+        send_text_shortcut = QtWidgets.QShortcut(
+            QtGui.QKeySequence('Ctrl+Return'), self.send_text_widget)
         self.send_button = QtWidgets.QPushButton()
         self.send_button.setIcon(qtawesome.icon('fa.send'))
         self.send_text_widget.setMaximumHeight(60)
@@ -181,6 +183,11 @@ class ChatWidget(QtWidgets.QWidget):
 
         self.send_button.clicked.connect(self.send_message)
         send_text_shortcut.activated.connect(self.send_message)
+        signal_bus.history_item_changed.connect(self.history_item_changed)
+
+    def history_item_changed(self, data):
+        self._history_data = data
+        self.role_label.setText(f'角色名：{data["data"]["role"] or "通用"}')
 
     def send_message(self):
         texts = self.send_text_widget.toPlainText().strip()
@@ -205,4 +212,3 @@ class ChatWidget(QtWidgets.QWidget):
             self._history_messages.append(data['message'])
 
         self.content_widget.add_message('bot', data['message']['content'], data['success'])
-
