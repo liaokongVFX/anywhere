@@ -27,7 +27,14 @@ class SignalBus(QtCore.QObject):
 
 signal_bus = SignalBus()
 
-h_spacer_item = QtWidgets.QSpacerItem(
-    0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-v_spacer_item = QtWidgets.QSpacerItem(
-    0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+
+def create_h_spacer_item():
+    return QtWidgets.QSpacerItem(
+        0, 0, QtWidgets.QSizePolicy.Expanding,
+        QtWidgets.QSizePolicy.Minimum)
+
+
+def create_v_spacer_item():
+    return QtWidgets.QSpacerItem(
+        0, 0, QtWidgets.QSizePolicy.Minimum,
+        QtWidgets.QSizePolicy.Expanding)

@@ -13,6 +13,7 @@ class NewChatWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.old_name = None
+        self.prompt_by_role = {}
         self._init_ui()
 
     def _init_ui(self):
@@ -41,13 +42,17 @@ class NewChatWindow(QtWidgets.QWidget):
         self.save_button.clicked.connect(self.save_button_clicked)
 
     def show_window(self, count):
+        self.prompt_by_role = {
+            x['name']: x['prompt']
+            for x in get_config('role', 'list')
+            if x['enabled']
+        }
+
         self.setWindowTitle('创建聊天')
         self.name_line.setText(f'新聊天{count}')
 
         self.role_combobox.clear()
-        self.role_combobox.addItems(
-            [''] + [x['name'] for x in get_config('role', 'list') if x['enabled']]
-        )
+        self.role_combobox.addItems([''] + list(self.prompt_by_role.keys()))
         self.role_combobox.setCurrentText('')
 
         self.description_line.setText('')
@@ -56,11 +61,17 @@ class NewChatWindow(QtWidgets.QWidget):
         self.show()
 
     def show_edit_window(self, name, config):
+        self.prompt_by_role = {
+            x['name']: x['prompt']
+            for x in get_config('role', 'list')
+            if x['enabled']
+        }
+
         self.setWindowTitle('编辑聊天')
         self.name_line.setText(name)
 
         self.role_combobox.clear()
-        self.role_combobox.addItems([''] + [x['name'] for x in get_config('role', 'list')])
+        self.role_combobox.addItems([''] + list(self.prompt_by_role.keys()))
 
         self.role_combobox.setCurrentText(config.get('role', ''))
         self.description_line.setText(config.get('description', ''))
@@ -82,6 +93,7 @@ class NewChatWindow(QtWidgets.QWidget):
             'description': self.description_line.text().strip(),
             'temperature': self.temperature_line.value(),
             'old_name': self.old_name,
+            'prompt': self.prompt_by_role.get(self.role_combobox.currentText(), '')
         })
         self.close()
 
@@ -168,11 +180,15 @@ class ChatHistoryWidget(QtWidgets.QWidget):
     def new_chat_window_saved(self, data):
         old_name = data.pop('old_name')
         name = data.pop('name')
+        prompt = data.pop('prompt')
         if not old_name:
             self.add_item(name, data)
             chat_history_storage.set_common_config(name, data)
             self.history_list_widget.setCurrentRow(
                 self.history_list_widget.count() - 1)
+            if prompt:
+                chat_history_storage.set_system_message(name, prompt)
+
         else:
             for index in range(self.history_list_widget.count()):
                 item = self.history_list_widget.item(index)
@@ -186,6 +202,8 @@ class ChatHistoryWidget(QtWidgets.QWidget):
                         widget = self.history_list_widget.itemWidget(item)
                         widget.set_name(name)
                         chat_history_storage.change_common_config_name(old_name, name, data)
+
+                    chat_history_storage.set_system_message(name, prompt)
                     break
 
     def add_item(self, name, data):

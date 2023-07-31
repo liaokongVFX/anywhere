@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 
 import requests
 from PySide2 import QtWidgets
@@ -6,13 +7,16 @@ from PySide2 import QtCore
 from PySide2 import QtGui
 import qtawesome
 
-from anywhere.widgets import signal_bus, show_message
-from anywhere.utils import get_config
+from anywhere.widgets import signal_bus, show_message, create_h_spacer_item, create_v_spacer_item
+from anywhere.utils import get_config, chat_history_storage
 
 
 class ChatMessageItem(QtWidgets.QFrame):
-    def __init__(self, role, text, success=True, parent=None):
+    deleted = QtCore.Signal(str)
+
+    def __init__(self, uid, role, text, success=True, parent=None):
         super().__init__(parent)
+        self.uid = uid
         self.role = role
         self.text = text
         self.success = success
@@ -28,9 +32,7 @@ class ChatMessageItem(QtWidgets.QFrame):
         name = '我' if self.role == 'user' else '机器人'
         info_label = QtWidgets.QLabel('{} {}'.format(name, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         header_layout.addWidget(info_label)
-        header_layout.addItem(
-            QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        )
+        header_layout.addItem(create_h_spacer_item())
 
         self.reload_button = QtWidgets.QToolButton()
         self.reload_button.setMinimumSize(30, 30)
@@ -64,6 +66,8 @@ class ChatMessageItem(QtWidgets.QFrame):
 
         self.message_widget_text_changed()
 
+        self.delete_button.clicked.connect(lambda: self.deleted.emit(self.uid))
+
     def message_widget_text_changed(self):
         self.document.adjustSize()
 
@@ -76,36 +80,52 @@ class ChatMessageItem(QtWidgets.QFrame):
 class ChatContentWidget(QtWidgets.QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.chat_name = None
         self._init_ui()
 
     def _init_ui(self):
         self._widget = QtWidgets.QWidget()
         self.layout = QtWidgets.QVBoxLayout(self._widget)
         self.layout.setAlignment(QtCore.Qt.AlignTop)
-        self.layout.addItem(
-            QtWidgets.QSpacerItem(0, 0,
-                                  QtWidgets.QSizePolicy.Minimum,
-                                  QtWidgets.QSizePolicy.Expanding
-                                  )
-        )
+        self.layout.addItem(create_v_spacer_item())
 
         self.setWidget(self._widget)
         self.setWidgetResizable(True)
 
     def add_message(self, role, message, success=True):
-        self.layout.insertWidget(
-            self.layout.count() - 1,
-            ChatMessageItem(role, message, success)
-        )
+        item = ChatMessageItem(str(uuid4()), role, message, success)
+        item.deleted.connect(self.item_deleted)
+
+        self.layout.insertWidget(self.layout.count() - 1, item)
+
+    def item_deleted(self, uid):
+        for index in range(self.layout.count()):
+            widget = self.layout.itemAt(index).widget()
+
+            if widget and widget.uid == uid:
+                widget.deleteLater()
+                chat_history_storage.delete_message_by_index(self.chat_name, index)
+                break
+
+    def clear(self):
+        for index in range(self.layout.count()):
+            widget = self.layout.itemAt(index).widget()
+
+            if widget:
+                widget.deleteLater()
+
+    def set_chat_name(self, name):
+        self.chat_name = name
 
 
 class SendMessageThread(QtCore.QThread):
     show_message_signal = QtCore.Signal(dict)
 
-    def __init__(self, messages, config, parent=None):
+    def __init__(self, messages, config, temperature, parent=None):
         super().__init__(parent)
         self.messages = messages
         self.config = config
+        self.temperature = temperature
 
     def run(self):
         url = self.config.get('proxy', 'https://api.openai.com/v1/chat/completions')
@@ -119,9 +139,9 @@ class SendMessageThread(QtCore.QThread):
 
         data = {
             'model': model,
-            'messages': self.messages
+            'messages': self.messages,
+            "temperature": self.temperature
         }
-        print(data)
 
         response = requests.post(url, headers=headers, json=data)
         if response.status_code == 200:
@@ -140,7 +160,7 @@ class ChatWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._history_messages = []
-        self._history_data = []
+        self._history_data = {}
 
         self._init_ui()
 
@@ -152,9 +172,7 @@ class ChatWidget(QtWidgets.QWidget):
         self.token_label = QtWidgets.QLabel('534')
         header_layout.addWidget(self.role_label)
 
-        header_layout.addItem(
-            QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        )
+        header_layout.addItem(create_h_spacer_item())
         header_layout.addWidget(QtWidgets.QLabel('token: '))
         header_layout.addWidget(self.token_label)
 
@@ -188,6 +206,19 @@ class ChatWidget(QtWidgets.QWidget):
     def history_item_changed(self, data):
         self._history_data = data
         self.role_label.setText(f'角色名：{data["data"]["role"] or "通用"}')
+        self.content_widget.set_chat_name(data['name'])
+
+        _messages = chat_history_storage.get_messages(data['name'])
+        if not _messages:
+            return
+
+        messages = _messages
+        if _messages[0]['role'] == 'system':
+            messages = _messages[1:]
+
+        self.content_widget.clear()
+        for message in messages:
+            self.content_widget.add_message(message['role'], message['content'])
 
     def send_message(self):
         texts = self.send_text_widget.toPlainText().strip()
@@ -199,16 +230,24 @@ class ChatWidget(QtWidgets.QWidget):
         if not key:
             return show_message('请先在公共设置中设置 API Key')
 
-        self._history_messages.append({'role': 'user', 'content': texts})
+        chat_history_storage.append_messages(
+            self._history_data['name'], {'role': 'user', 'content': texts})
         self.content_widget.add_message('user', texts)
         self.send_text_widget.setPlainText('')
 
-        send_message_thread = SendMessageThread(self._history_messages, config, self)
+        send_message_thread = SendMessageThread(
+            chat_history_storage.get_messages(self._history_data['name']),
+            config,
+            self._history_data['data']['temperature'],
+            self
+        )
         send_message_thread.show_message_signal.connect(self.show_message)
         send_message_thread.start()
 
     def show_message(self, data):
         if data['success']:
-            self._history_messages.append(data['message'])
+            chat_history_storage.append_messages(
+                self._history_data['name'], data['message'])
 
-        self.content_widget.add_message('bot', data['message']['content'], data['success'])
+        self.content_widget.add_message(
+            'bot', data['message']['content'], data['success'])

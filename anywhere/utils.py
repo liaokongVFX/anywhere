@@ -60,6 +60,37 @@ class ChatHistoryStorage(object):
         self._storage[chat_name].setdefault('messages', []).append(message)
         self._save_history()
 
+    def delete_message_by_index(self, chat_name, index):
+        if (self._storage[chat_name]['messages'] and
+                self._storage[chat_name]['messages'][0]['role'] == 'system'):
+            index += 1
+        self._storage[chat_name]['messages'].pop(index)
+        self._save_history()
+
+    def set_system_message(self, chat_name, message):
+        if ('messages' not in self._storage[chat_name] or
+                not self._storage[chat_name]['messages']):
+            self._storage[chat_name].setdefault('messages', []).append(
+                {'role': 'system', 'content': message})
+        else:
+            if self._storage[chat_name]['messages'][0]['role'] == 'system':
+                self._storage[chat_name]['messages'][0]['content'] = message
+            else:
+                self._storage[chat_name]['messages'].insert(
+                    0, {'role': 'system', 'content': message})
+
+        self._save_history()
+
+    def delete_system_message(self, chat_name):
+        if 'messages' not in self._storage[chat_name]:
+            return
+        if (not self._storage[chat_name]['messages'] or
+                self._storage[chat_name]['messages'][0]['role'] != 'system'):
+            return
+        self._storage[chat_name]['messages'].pop(0)
+
+        self._save_history()
+
     def get_common_config(self, chat_name):
         return self._storage.get(chat_name, {}).get('common', {})
 

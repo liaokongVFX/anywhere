@@ -4,7 +4,7 @@ from PySide2 import QtGui
 import qtawesome
 
 from anywhere.utils import get_config, save_config, CONFIG_PATH
-from anywhere.widgets import show_message, show_question, h_spacer_item
+from anywhere.widgets import show_message, show_question, create_h_spacer_item
 
 
 class CommonPage(QtWidgets.QWidget):
@@ -182,7 +182,7 @@ class RoleItem(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(self.enabled_checkbox)
         layout.addWidget(self.name_label)
-        layout.addItem(h_spacer_item)
+        layout.addItem(create_h_spacer_item())
         layout.addWidget(self.edit_button)
         layout.addWidget(self.delete_button)
 
