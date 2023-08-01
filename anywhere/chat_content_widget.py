@@ -67,6 +67,8 @@ class ChatMessageItem(QtWidgets.QFrame):
         self.message_widget_text_changed()
 
         self.delete_button.clicked.connect(lambda: self.deleted.emit(self.uid))
+        self.copy_button.clicked.connect(
+            lambda: QtWidgets.QApplication.clipboard().setText(self.text))
 
     def message_widget_text_changed(self):
         self.document.adjustSize()
