@@ -1,6 +1,8 @@
 from datetime import datetime
 from uuid import uuid4
+from functools import partial
 
+import openai
 import requests
 from PySide2 import QtWidgets
 from PySide2 import QtCore
@@ -13,6 +15,7 @@ from anywhere.utils import get_config, chat_history_storage
 
 class ChatMessageItem(QtWidgets.QFrame):
     deleted = QtCore.Signal(str)
+    reloaded = QtCore.Signal(str)
 
     def __init__(self, uid, role, text, success=True, parent=None):
         super().__init__(parent)
@@ -54,7 +57,7 @@ class ChatMessageItem(QtWidgets.QFrame):
         self.message_widget = QtWidgets.QTextEdit()
         self.message_widget.setFrameShape(QtWidgets.QListWidget.NoFrame)
         self.message_widget.setReadOnly(True)
-        self.message_widget.setMarkdown(self.text)
+        self.message_widget.setText(self.text)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setAlignment(QtCore.Qt.AlignTop)
@@ -69,6 +72,7 @@ class ChatMessageItem(QtWidgets.QFrame):
         self.delete_button.clicked.connect(lambda: self.deleted.emit(self.uid))
         self.copy_button.clicked.connect(
             lambda: QtWidgets.QApplication.clipboard().setText(self.text))
+        self.reload_button.clicked.connect(lambda: self.reloaded.emit(self.uid))
 
     def message_widget_text_changed(self):
         self.document.adjustSize()
@@ -77,6 +81,10 @@ class ChatMessageItem(QtWidgets.QFrame):
         if new_height != self.message_widget.height():
             self.message_widget.setFixedHeight(new_height)
             self.setFixedHeight(new_height + 50)
+
+    def set_text(self, text, success=True):
+        self.message_widget.setText(text)
+        self.success = success
 
 
 class ChatContentWidget(QtWidgets.QScrollArea):
@@ -97,8 +105,39 @@ class ChatContentWidget(QtWidgets.QScrollArea):
     def add_message(self, role, message, success=True):
         item = ChatMessageItem(str(uuid4()), role, message, success)
         item.deleted.connect(self.item_deleted)
+        item.reloaded.connect(self.item_reloaded)
 
         self.layout.insertWidget(self.layout.count() - 1, item)
+        return item
+
+    def item_reloaded(self, uid):
+        for index in range(self.layout.count()):
+            widget = self.layout.itemAt(index).widget()
+            if widget and widget.uid == uid:
+                widget.set_text('重新生成中...')
+
+                messages = chat_history_storage.get_message_by_index(
+                    self.chat_name, index)
+                config = chat_history_storage.get_common_config(self.chat_name)
+                send_message_thread = SendMessageThread(
+                    messages,
+                    get_config('common'),
+                    config.get('temperature', 0.6),
+                    self
+                )
+                send_message_thread.show_message_signal.connect(
+                    partial(self._show_message, widget, index))
+                send_message_thread.start()
+                break
+
+    def _show_message(self, widget, index, data):
+        if data['success']:
+            chat_history_storage.replace_message_by_index(
+                self.chat_name, data['message'], index)
+        else:
+            chat_history_storage.pop_message(self.chat_name)
+
+        widget.set_text(data['message'], data['success'])
 
     def item_deleted(self, uid):
         for index in range(self.layout.count()):
@@ -130,31 +169,34 @@ class SendMessageThread(QtCore.QThread):
         self.temperature = temperature
 
     def run(self):
-        url = self.config.get('proxy', 'https://api.openai.com/v1/chat/completions')
+        url = self.config.get('proxy', 'https://api.openai.com/v1')
         key = self.config['key']
         model = self.config['model']
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {key}'
-        }
-
-        data = {
-            'model': model,
-            'messages': self.messages,
-            "temperature": self.temperature
-        }
-
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            self.show_message_signal.emit({
-                'success': True,
-                'message': response.json()['choices'][0]['message']
-            })
-        else:
+        openai.api_key = key
+        openai.api_base = url
+        print(self.messages)
+        try:
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=self.messages,
+                temperature=self.temperature,
+                stream=True
+            )
+            message = ''
+            for chunk in response:
+                chunk_message = chunk['choices'][0]['delta']
+                if "content" in chunk_message:
+                    message_text = chunk_message['content']
+                    message += message_text
+                    self.show_message_signal.emit({
+                        'success': True,
+                        'message': message
+                    })
+        except Exception as e:
             self.show_message_signal.emit({
                 'success': False,
-                'message': {'content': response.json()['message']}
+                'message': f'请求出错：\n{str(e)}'
             })
 
 
@@ -175,10 +217,12 @@ class ChatWidget(QtWidgets.QWidget):
         header_layout.addWidget(self.role_label)
 
         header_layout.addItem(create_h_spacer_item())
-        header_layout.addWidget(QtWidgets.QLabel('token: '))
-        header_layout.addWidget(self.token_label)
+        # 暂时不显示 token
+        # header_layout.addWidget(QtWidgets.QLabel('token: '))
+        # header_layout.addWidget(self.token_label)
 
         self.content_widget = ChatContentWidget()
+        self.content_scrollbar = self.content_widget.verticalScrollBar()
 
         self.send_text_widget = QtWidgets.QPlainTextEdit(
             placeholderText='点击右侧按钮或者使用快捷键 Ctrl+Enter 发送消息')
@@ -204,11 +248,14 @@ class ChatWidget(QtWidgets.QWidget):
         self.send_button.clicked.connect(self.send_message)
         send_text_shortcut.activated.connect(self.send_message)
         signal_bus.history_item_changed.connect(self.history_item_changed)
+        self.content_scrollbar.rangeChanged.connect(
+            lambda _, max_v: self.content_scrollbar.setValue(max_v))
 
     def history_item_changed(self, data):
         self._history_data = data
         self.role_label.setText(f'角色名：{data["data"]["role"] or "通用"}')
         self.content_widget.set_chat_name(data['name'])
+        self.content_widget.clear()
 
         _messages = chat_history_storage.get_messages(data['name'])
         if not _messages:
@@ -237,19 +284,25 @@ class ChatWidget(QtWidgets.QWidget):
         self.content_widget.add_message('user', texts)
         self.send_text_widget.setPlainText('')
 
+        # 设置默认的
+        item = self.content_widget.add_message('bot', '思考中...', True)
+        chat_history_storage.append_messages(self._history_data['name'], '思考中...')
+
         send_message_thread = SendMessageThread(
             chat_history_storage.get_messages(self._history_data['name']),
             config,
             self._history_data['data']['temperature'],
             self
         )
-        send_message_thread.show_message_signal.connect(self.show_message)
+        send_message_thread.show_message_signal.connect(partial(self.show_message, item))
         send_message_thread.start()
 
-    def show_message(self, data):
+    def show_message(self, item, data):
         if data['success']:
-            chat_history_storage.append_messages(
+            chat_history_storage.replace_message_by_index(
                 self._history_data['name'], data['message'])
+        else:
+            chat_history_storage.pop_message(self._history_data['name'])
 
-        self.content_widget.add_message(
-            'bot', data['message']['content'], data['success'])
+        item.set_text(data['message'], data['success'])
+        item.update()

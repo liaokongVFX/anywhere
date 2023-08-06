@@ -67,6 +67,29 @@ class ChatHistoryStorage(object):
         self._storage[chat_name]['messages'].pop(index)
         self._save_history()
 
+    def pop_message(self, chat_name):
+        self._storage[chat_name]['messages'].pop()
+        self._save_history()
+
+    def get_message_by_index(self, chat_name, index):
+        if (self._storage[chat_name]['messages'] and
+                self._storage[chat_name]['messages'][0]['role'] == 'system'):
+            index += 1
+        return self._storage[chat_name]['messages'][: index]
+
+    def replace_message_by_index(self, chat_name, message, index=None):
+        if index is not None:
+            if (self._storage[chat_name]['messages'] and
+                    self._storage[chat_name]['messages'][0]['role'] == 'system'):
+                index += 1
+        else:
+            index = len(self._storage[chat_name]['messages']) - 1
+        try:
+            self._storage[chat_name]['messages'][index]['content'] = message
+        except:
+            self._storage[chat_name]['messages'].append({'role': 'assistant', 'content': message})
+        self._save_history()
+
     def set_system_message(self, chat_name, message):
         if ('messages' not in self._storage[chat_name] or
                 not self._storage[chat_name]['messages']):
