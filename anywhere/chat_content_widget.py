@@ -1,9 +1,9 @@
+import os
 from datetime import datetime
 from uuid import uuid4
 from functools import partial
 
 import openai
-import requests
 from PySide2 import QtWidgets
 from PySide2 import QtCore
 from PySide2 import QtGui
@@ -11,7 +11,8 @@ import qtawesome
 
 from anywhere.widgets import signal_bus, show_message, create_h_spacer_item, create_v_spacer_item
 from anywhere.utils import get_config, chat_history_storage
-
+# from anywhere.markdown_to_html import markdown_converter
+from anywhere.markdown_convert import markdown_to_html
 
 class ChatMessageItem(QtWidgets.QFrame):
     deleted = QtCore.Signal(str)
@@ -57,7 +58,9 @@ class ChatMessageItem(QtWidgets.QFrame):
         self.message_widget = QtWidgets.QTextEdit()
         self.message_widget.setFrameShape(QtWidgets.QListWidget.NoFrame)
         self.message_widget.setReadOnly(True)
-        self.message_widget.setText(self.text)
+
+        text = markdown_to_html(self.text)
+        self.message_widget.setHtml(text)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setAlignment(QtCore.Qt.AlignTop)
