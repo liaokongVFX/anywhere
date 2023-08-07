@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from uuid import uuid4
 from functools import partial
@@ -11,8 +10,8 @@ import qtawesome
 
 from anywhere.widgets import signal_bus, show_message, create_h_spacer_item, create_v_spacer_item
 from anywhere.utils import get_config, chat_history_storage
-# from anywhere.markdown_to_html import markdown_converter
 from anywhere.markdown_convert import markdown_to_html
+
 
 class ChatMessageItem(QtWidgets.QFrame):
     deleted = QtCore.Signal(str)
