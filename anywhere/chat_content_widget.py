@@ -79,13 +79,18 @@ class ChatMessageItem(QtWidgets.QFrame):
     def message_widget_text_changed(self):
         self.document.adjustSize()
 
-        new_height = self.document.size().height() + 10
+        new_height = self.document.size().height()
         if new_height != self.message_widget.height():
             self.message_widget.setFixedHeight(new_height)
             self.setFixedHeight(new_height + 50)
 
-    def set_text(self, text, success=True):
-        self.message_widget.setText(text)
+    def set_text(self, text, success=True, final=True):
+        self.text = text
+        if final:
+            text = markdown_to_html(self.text)
+            self.message_widget.setHtml(text)
+        else:
+            self.message_widget.setText(text)
         self.success = success
 
 
@@ -139,7 +144,7 @@ class ChatContentWidget(QtWidgets.QScrollArea):
         else:
             chat_history_storage.pop_message(self.chat_name)
 
-        widget.set_text(data['message'], data['success'])
+        widget.set_text(data['message'], data['success'], data['final'])
 
     def item_deleted(self, uid):
         for index in range(self.layout.count()):
@@ -193,12 +198,19 @@ class SendMessageThread(QtCore.QThread):
                     message += message_text
                     self.show_message_signal.emit({
                         'success': True,
-                        'message': message
+                        'message': message,
+                        'final': False
                     })
+            self.show_message_signal.emit({
+                'success': True,
+                'message': message,
+                'final': True
+            })
         except Exception as e:
             self.show_message_signal.emit({
                 'success': False,
-                'message': f'请求出错：\n{str(e)}'
+                'message': f'请求出错：\n{str(e)}',
+                'final': True
             })
 
 
@@ -306,5 +318,5 @@ class ChatWidget(QtWidgets.QWidget):
         else:
             chat_history_storage.pop_message(self._history_data['name'])
 
-        item.set_text(data['message'], data['success'])
+        item.set_text(data['message'], data['success'], data['final'])
         item.update()

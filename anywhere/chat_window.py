@@ -10,7 +10,7 @@ class ChatWindow(QtWidgets.QDialog):
         self._init_ui()
 
     def _init_ui(self):
-        self.resize(900, 700)
+        self.resize(1000, 800)
 
         self.chat_history_widget = ChatHistoryWidget()
         self.chat_widget = ChatWidget()
