@@ -1,9 +1,8 @@
-import os
 import markdown
+from anywhere.utils import RESOURCES_PATH
 
 
-source_dir = os.path.dirname(__file__).replace('\\', '/')
-with open(f'{source_dir}/resources/css/code.css', encoding='utf-8') as f:
+with open(f'{RESOURCES_PATH}/css/code.css', encoding='utf-8') as f:
     style = f.read()
 
 

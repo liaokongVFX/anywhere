@@ -4,6 +4,7 @@ import os
 CONFIG_ROOT = os.path.expanduser('~/Anywhere').replace('\\', '/')
 CONFIG_PATH = '{}/{}'.format(CONFIG_ROOT, 'AnywhereConfig.json')
 CHAT_HISTORY = '{}/{}'.format(CONFIG_ROOT, 'ChatHistory.json')
+RESOURCES_PATH = '{}/resources'.format(os.path.dirname(__file__).replace('\\', '/'))
 
 
 def save_config(config_type, _data, data_type='dict', is_set=False):
