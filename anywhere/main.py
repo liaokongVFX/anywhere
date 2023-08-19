@@ -5,6 +5,10 @@ from PySide2 import QtCore
 from PySide2 import QtGui
 
 from anywhere.config_window import ConfigWidget
+from anywhere.chat_window import ChatWindow
+from anywhere.widgets import signal_bus
+from anywhere.utils import get_config
+from anywhere.hotkey import HotkeyThread
 
 
 class TrayIcon(QtWidgets.QSystemTrayIcon):
@@ -14,10 +18,46 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
         self.setIcon(QtGui.QIcon('publish.png'))
 
         self.config_widget = ConfigWidget()
+        self.chat_window = ChatWindow()
+        self.hotkey_thread = None
+
+        self._config_saved()
 
         self.create_tray_menu()
+        self._connect()
+
+        self._init_hotkey()
 
         self.bubble('托盘启动成功！')
+
+    def _connect(self):
+        signal_bus.config_saved.connect(self._config_saved)
+
+    def _init_hotkey(self):
+        config = get_config('common')
+
+        shortcut_map = {}
+        chat_shortcut = config.get('chat_shortcut')
+        if chat_shortcut:
+            shortcut_map.update({chat_shortcut: 'show_chat'})
+
+        if shortcut_map:
+            self.hotkey_thread = HotkeyThread(shortcut_map, self)
+            self.hotkey_thread.shortcut_triggered.connect(self._shortcut_triggered)
+            self.hotkey_thread.start()
+
+    def _shortcut_triggered(self, action_name):
+        action_map = {
+            'show_chat': self.chat_window.show
+        }
+        action_map[action_name]()
+
+    def _config_saved(self):
+        if self.hotkey_thread:
+            self.hotkey_thread.terminate()
+            self.hotkey_thread = None
+
+        self._init_hotkey()
 
     def create_tray_menu(self):
         self.tray_menu = QtWidgets.QMenu()

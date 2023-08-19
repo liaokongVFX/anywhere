@@ -4,7 +4,7 @@ from PySide2 import QtGui
 import qtawesome
 
 from anywhere.utils import get_config, save_config, CONFIG_PATH
-from anywhere.widgets import show_message, show_question, create_h_spacer_item
+from anywhere.widgets import show_message, show_question, create_h_spacer_item, signal_bus
 
 
 class CommonPage(QtWidgets.QWidget):
@@ -85,6 +85,7 @@ class CommonPage(QtWidgets.QWidget):
             'menu_shortcut': self.menu_line.text().strip()
         }
         save_config('common', data)
+        signal_bus.config_saved.emit()
         show_message('配置保存成功')
 
 

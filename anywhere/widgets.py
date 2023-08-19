@@ -17,6 +17,7 @@ class SignalBus(QtCore.QObject):
     """ 全局事件总线 """
 
     history_item_changed = QtCore.Signal(dict)
+    config_saved = QtCore.Signal()
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, '_instance'):

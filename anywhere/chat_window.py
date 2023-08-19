@@ -1,4 +1,5 @@
 from PySide2 import QtWidgets
+from PySide2 import QtCore
 
 from anywhere.chat_history_widget import ChatHistoryWidget
 from anywhere.chat_content_widget import ChatWidget
@@ -11,6 +12,9 @@ class ChatWindow(QtWidgets.QDialog):
 
     def _init_ui(self):
         self.resize(1000, 800)
+        self.setWindowFlags(QtCore.Qt.Dialog |
+                            QtCore.Qt.WindowMinMaxButtonsHint |
+                            QtCore.Qt.WindowCloseButtonHint)
 
         self.chat_history_widget = ChatHistoryWidget()
         self.chat_widget = ChatWidget()
