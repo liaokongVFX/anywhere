@@ -1,8 +1,8 @@
 from PySide2 import QtWidgets
 from PySide2 import QtCore
 
-from anywhere.chat_history_widget import ChatHistoryWidget
-from anywhere.chat_content_widget import ChatWidget
+from anywhere.chat.chat_history_widget import ChatHistoryWidget
+from anywhere.chat.chat_content_widget import ChatWidget
 
 
 class ChatWindow(QtWidgets.QDialog):

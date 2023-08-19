@@ -1,11 +1,10 @@
 import sys
 
 from PySide2 import QtWidgets
-from PySide2 import QtCore
 from PySide2 import QtGui
 
 from anywhere.config_window import ConfigWidget
-from anywhere.chat_window import ChatWindow
+from anywhere.chat.chat_window import ChatWindow
 from anywhere.widgets import signal_bus
 from anywhere.utils import get_config
 from anywhere.hotkey import HotkeyThread
@@ -15,7 +14,7 @@ class TrayIcon(QtWidgets.QSystemTrayIcon):
     def __init__(self, parent=None):
         super(TrayIcon, self).__init__(parent)
         self.setToolTip('Chuangyi Sitter')
-        self.setIcon(QtGui.QIcon('publish.png'))
+        self.setIcon(QtGui.QIcon('resources/images/publish.png'))
 
         self.config_widget = ConfigWidget()
         self.chat_window = ChatWindow()
