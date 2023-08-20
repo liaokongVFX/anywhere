@@ -73,7 +73,7 @@ class ChatMessageItem(QtWidgets.QFrame):
 
         self.delete_button.clicked.connect(lambda: self.deleted.emit(self.uid))
         self.copy_button.clicked.connect(
-            lambda: QtWidgets.QApplication.clipboard().setText(self.text))
+            lambda: signal_bus.message_copied.emit(self.text))
         self.reload_button.clicked.connect(lambda: self.reloaded.emit(self.uid))
 
     def message_widget_text_changed(self):

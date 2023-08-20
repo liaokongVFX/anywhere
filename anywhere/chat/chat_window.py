@@ -3,6 +3,7 @@ from PySide2 import QtCore
 
 from anywhere.chat.chat_history_widget import ChatHistoryWidget
 from anywhere.chat.chat_content_widget import ChatWidget
+from anywhere.widgets import signal_bus, Message
 
 
 class ChatWindow(QtWidgets.QDialog):
@@ -28,6 +29,13 @@ class ChatWindow(QtWidgets.QDialog):
         layout.addWidget(splitter)
 
         self.chat_history_widget.init_data()
+
+        signal_bus.message_copied.connect(self._message_copied)
+
+    def _message_copied(self, message):
+        QtWidgets.QApplication.clipboard().setText(message)
+        message = Message('文字已成功复制到剪切板', 'success', parent=self)
+        message.show()
 
 
 if __name__ == '__main__':
